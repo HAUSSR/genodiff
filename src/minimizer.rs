@@ -57,7 +57,12 @@ impl RollingKmer {
         } else {
             (1u64 << (2 * k)) - 1
         };
-        RollingKmer { k, fwd: 0, rev: 0, mask }
+        RollingKmer {
+            k,
+            fwd: 0,
+            rev: 0,
+            mask,
+        }
     }
 
     /// Push the next base (code 0..=3). Callers feed a dummy 0 at N positions;

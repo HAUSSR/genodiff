@@ -8,17 +8,21 @@ use genodiff::seeds::{collect_anchors, SeedStats};
 use genodiff::sim::{self, SimParams};
 
 fn rand_seq(rng: &mut Rng, n: usize) -> Vec<u8> {
-    (0..n)
-        .map(|_| b"ACGT"[rng.below(4) as usize])
-        .collect()
+    (0..n).map(|_| b"ACGT"[rng.below(4) as usize]).collect()
 }
 
 #[test]
 fn simulated_genome_maps_back_to_reference() {
     let mut rng = Rng::new(123);
     let refs = vec![
-        FastaRecord { name: "chr1".into(), seq: rand_seq(&mut rng, 1_500_000) },
-        FastaRecord { name: "chr2".into(), seq: rand_seq(&mut rng, 500_000) },
+        FastaRecord {
+            name: "chr1".into(),
+            seq: rand_seq(&mut rng, 1_500_000),
+        },
+        FastaRecord {
+            name: "chr2".into(),
+            seq: rand_seq(&mut rng, 500_000),
+        },
     ];
     // ~0.1% divergence plus SVs: harder than a typical "near-relative" pair
     let p = SimParams {
@@ -44,5 +48,8 @@ fn simulated_genome_maps_back_to_reference() {
     let frac = total.matched_fraction();
     assert!(frac >= 0.85, "matched fraction too low: {frac:.3}");
     // sanity on the absolute scale: 2 Mb at w=19 must give a healthy seed count
-    assert!(total.query_minimizers > 100_000, "unexpectedly few minimizers");
+    assert!(
+        total.query_minimizers > 100_000,
+        "unexpectedly few minimizers"
+    );
 }

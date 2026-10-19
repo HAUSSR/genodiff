@@ -42,17 +42,35 @@ impl Default for CallParams {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Var {
-    Snp { ref_base: u8, alt_base: u8 },
+    Snp {
+        ref_base: u8,
+        alt_base: u8,
+    },
     /// deletion of `len` reference bases starting at 0-based pos-1
-    Del { len: u32 },
+    Del {
+        len: u32,
+    },
     /// insertion of `seq` (reference-forward strand) before 0-based pos
-    Ins { seq: Vec<u8> },
-    SvDel { seq: Vec<u8> },
-    SvIns { seq: Vec<u8> },
-    SvInv { seq: Vec<u8> },
-    SvDup { seq: Vec<u8> },
+    Ins {
+        seq: Vec<u8>,
+    },
+    SvDel {
+        seq: Vec<u8>,
+    },
+    SvIns {
+        seq: Vec<u8>,
+    },
+    SvInv {
+        seq: Vec<u8>,
+    },
+    SvDup {
+        seq: Vec<u8>,
+    },
     /// breakend: the query joins reference contig `chr2` around `pos2`
-    SvTra { chr2: u32, pos2: u64 },
+    SvTra {
+        chr2: u32,
+        pos2: u64,
+    },
 }
 
 #[derive(Clone, Debug)]
@@ -146,7 +164,10 @@ pub fn call_contig(
     for rec in call_svs(
         &chains,
         &flagged,
-        &SvParams { min_sv_len: params.min_sv_len, ..SvParams::default() },
+        &SvParams {
+            min_sv_len: params.min_sv_len,
+            ..SvParams::default()
+        },
         ref_seqs,
         qseq,
     ) {
@@ -227,7 +248,13 @@ pub fn call_contig(
                     // pure deletion: ref[rs..re] absent from query
                     let (mut d, len) = (rs, rl);
                     normalize_del(rseq, &mut d, len, floor);
-                    push_var(&mut vars, &mut st, ch.ref_contig, d as u64, Var::Del { len: len as u32 });
+                    push_var(
+                        &mut vars,
+                        &mut st,
+                        ch.ref_contig,
+                        d as u64,
+                        Var::Del { len: len as u32 },
+                    );
                     st.gaps_pure += 1;
                     continue;
                 }
@@ -237,7 +264,13 @@ pub fn call_contig(
                     let seq: Vec<u8> = (gs..ge).map(|i| base(i)).collect();
                     let (mut q, mut seq) = (rs, seq);
                     normalize_ins(rseq, &mut q, &mut seq, floor);
-                    push_var(&mut vars, &mut st, ch.ref_contig, q as u64, Var::Ins { seq });
+                    push_var(
+                        &mut vars,
+                        &mut st,
+                        ch.ref_contig,
+                        q as u64,
+                        Var::Ins { seq },
+                    );
                     st.gaps_pure += 1;
                     continue;
                 }
@@ -247,7 +280,13 @@ pub fn call_contig(
                     if mn <= params.sv_small_side && (mx - mn) as u64 >= params.min_sv_len {
                         if rl > gl {
                             let seq = rseq[rs..rs + (rl - gl)].to_vec();
-                            push_var(&mut vars, &mut st, ch.ref_contig, rs as u64, Var::SvDel { seq });
+                            push_var(
+                                &mut vars,
+                                &mut st,
+                                ch.ref_contig,
+                                rs as u64,
+                                Var::SvDel { seq },
+                            );
                         } else {
                             let ins_start = gs + rl;
                             let seq: Vec<u8> = (ins_start..ge).map(|i| base(i)).collect();
@@ -259,8 +298,14 @@ pub fn call_contig(
                             } else {
                                 Some((ch.q_end - ge as u64, ch.q_end - ins_start as u64))
                             };
-                            push_qvar(&mut vars, &mut st, ch.ref_contig, rs as u64,
-                                      Var::SvIns { seq }, qspan);
+                            push_qvar(
+                                &mut vars,
+                                &mut st,
+                                ch.ref_contig,
+                                rs as u64,
+                                Var::SvIns { seq },
+                                qspan,
+                            );
                         }
                         st.gaps_sv += 1;
                     } else {
@@ -303,7 +348,16 @@ pub fn call_contig(
                             } else {
                                 // base() is already reference-forward on both
                                 // strands, so ob is the VCF ALT as-is
-                                push_var(&mut vars, &mut st, ch.ref_contig, ri as u64 + 1, Var::Snp { ref_base: rb, alt_base: ob });
+                                push_var(
+                                    &mut vars,
+                                    &mut st,
+                                    ch.ref_contig,
+                                    ri as u64 + 1,
+                                    Var::Snp {
+                                        ref_base: rb,
+                                        alt_base: ob,
+                                    },
+                                );
                             }
                             ri += 1;
                             oi += 1;
@@ -317,7 +371,13 @@ pub fn call_contig(
                             }
                             let (mut d, len) = (d0, ri - d0);
                             normalize_del(rseq, &mut d, len, floor);
-                            push_var(&mut vars, &mut st, ch.ref_contig, d as u64, Var::Del { len: len as u32 });
+                            push_var(
+                                &mut vars,
+                                &mut st,
+                                ch.ref_contig,
+                                d as u64,
+                                Var::Del { len: len as u32 },
+                            );
                         }
                         Op::Ins => {
                             let ostart = oi;
@@ -328,7 +388,13 @@ pub fn call_contig(
                             let seq: Vec<u8> = (ostart..oi).map(|x| base(x)).collect();
                             let (mut q, mut seq) = (ri, seq);
                             normalize_ins(rseq, &mut q, &mut seq, floor);
-                            push_var(&mut vars, &mut st, ch.ref_contig, q as u64, Var::Ins { seq });
+                            push_var(
+                                &mut vars,
+                                &mut st,
+                                ch.ref_contig,
+                                q as u64,
+                                Var::Ins { seq },
+                            );
                         }
                     }
                 }
@@ -347,7 +413,13 @@ pub fn call_contig(
                 if d < 0 {
                     let (mut p, len) = (left, (-d) as usize);
                     normalize_del(rseq, &mut p, len, floor);
-                    push_var(&mut vars, &mut st, ch.ref_contig, p as u64, Var::Del { len: len as u32 });
+                    push_var(
+                        &mut vars,
+                        &mut st,
+                        ch.ref_contig,
+                        p as u64,
+                        Var::Del { len: len as u32 },
+                    );
                 } else {
                     // query carries d extra bases; take the d oriented bases
                     // just left of the next seed's start as the allele (any
@@ -359,7 +431,13 @@ pub fn call_contig(
                         let seq: Vec<u8> = (qs..qe).map(|i| base(i)).collect();
                         let (mut p, mut seq) = (left, seq);
                         normalize_ins(rseq, &mut p, &mut seq, floor);
-                        push_var(&mut vars, &mut st, ch.ref_contig, p as u64, Var::Ins { seq });
+                        push_var(
+                            &mut vars,
+                            &mut st,
+                            ch.ref_contig,
+                            p as u64,
+                            Var::Ins { seq },
+                        );
                     } else {
                         st.gaps_skipped += 1;
                     }
@@ -393,7 +471,12 @@ fn push_qvar(
         Var::SvDup { .. } => st.sv_dup += 1,
         Var::SvTra { .. } => st.sv_tra += 1,
     }
-    vars.push(VarRec { contig, pos, var, qspan });
+    vars.push(VarRec {
+        contig,
+        pos,
+        var,
+        qspan,
+    });
 }
 
 /// Shift a deletion of `len` bases at `*d` as far left as the reference
@@ -442,7 +525,10 @@ mod tests {
                 VarKind::Snp { pos, alt } => out.push((
                     *ci as u32,
                     pos + 1,
-                    Var::Snp { ref_base: rseq[*pos as usize], alt_base: *alt },
+                    Var::Snp {
+                        ref_base: rseq[*pos as usize],
+                        alt_base: *alt,
+                    },
                 )),
                 VarKind::Del { pos, len } => {
                     let (mut d, len) = (*pos as usize, *len as usize);
@@ -461,29 +547,57 @@ mod tests {
     }
 
     fn called_set(vars: &[VarRec]) -> Vec<(u32, u64, Var)> {
-        vars.iter().map(|v| (v.contig, v.pos, v.var.clone())).collect()
+        vars.iter()
+            .map(|v| (v.contig, v.pos, v.var.clone()))
+            .collect()
     }
 
     #[test]
     fn snp_and_small_indel_recall_precision() {
         let mut rng = Rng::new(20);
-        let refs = vec![FastaRecord { name: "c1".into(), seq: rand_seq(&mut rng, 200_000) }];
+        let refs = vec![FastaRecord {
+            name: "c1".into(),
+            seq: rand_seq(&mut rng, 200_000),
+        }];
         let sim = simulate(
             &refs,
-            &SimParams { snp: 150, indel: 40, del: 0, ins: 0, inv: 0, dup: 0, seed: 5 },
+            &SimParams {
+                snp: 150,
+                indel: 40,
+                del: 0,
+                ins: 0,
+                inv: 0,
+                dup: 0,
+                seed: 5,
+            },
         );
         let idx = build_idx(&refs);
-        let (vars, st) = call_contig(&idx, &ref_seqs(&refs), &sim.queries[0].seq, &CallParams::default());
+        let (vars, st) = call_contig(
+            &idx,
+            &ref_seqs(&refs),
+            &sim.queries[0].seq,
+            &CallParams::default(),
+        );
 
         let expected = expected_set(&refs, &sim);
         let called = called_set(&vars);
-        let n_expected_snp = expected.iter().filter(|(_, _, v)| matches!(v, Var::Snp { .. })).count();
+        let n_expected_snp = expected
+            .iter()
+            .filter(|(_, _, v)| matches!(v, Var::Snp { .. }))
+            .count();
         let n_expected_indel = expected.len() - n_expected_snp;
         let hit = called.iter().filter(|c| expected.contains(c)).count();
-        let n_called_snp = called.iter().filter(|(_, _, v)| matches!(v, Var::Snp { .. })).count();
+        let n_called_snp = called
+            .iter()
+            .filter(|(_, _, v)| matches!(v, Var::Snp { .. }))
+            .count();
         let n_called_indel = called.len() - n_called_snp;
 
-        assert!(st.chains_junk == 0, "junk chains on a clean genome: {}", st.chains_junk);
+        assert!(
+            st.chains_junk == 0,
+            "junk chains on a clean genome: {}",
+            st.chains_junk
+        );
         assert!(
             hit as u64 * 100 >= expected.len() as u64 * 95,
             "recall too low: {}/{} (stats: snps={} dels={} ins={} skipped={})",
@@ -508,12 +622,21 @@ mod tests {
     fn snp_inside_inversion_called_on_correct_strand() {
         let mut rng = Rng::new(21);
         let seq = rand_seq(&mut rng, 200_000);
-        let refs = vec![FastaRecord { name: "c1".into(), seq: seq.clone() }];
+        let refs = vec![FastaRecord {
+            name: "c1".into(),
+            seq: seq.clone(),
+        }];
         // invert [100k, 103k): inside the inverted block, flip the query
         // base at query pos 101000; that position mirrors reference pos
         // ipos+ilen-1-(101000-ipos) = 102999
         let (ipos, ilen, qpos) = (100_000usize, 3_000usize, 101_000usize);
-        let mut query = apply_edits(&seq, &[VarKind::Inv { pos: ipos as u64, len: ilen as u64 }]);
+        let mut query = apply_edits(
+            &seq,
+            &[VarKind::Inv {
+                pos: ipos as u64,
+                len: ilen as u64,
+            }],
+        );
         let flipped = if query[qpos] == b'A' { b'C' } else { b'A' };
         query[qpos] = flipped;
         let mirror = ipos + ilen - 1 - (qpos - ipos);
@@ -530,14 +653,22 @@ mod tests {
                     && !matches!(v.var, Var::SvInv { .. })
             })
             .collect();
-        assert_eq!(inside.len(), 1, "exactly one non-SV variant inside the inversion: {inside:?}");
+        assert_eq!(
+            inside.len(),
+            1,
+            "exactly one non-SV variant inside the inversion: {inside:?}"
+        );
         assert!(
             vars.iter().any(|v| matches!(v.var, Var::SvInv { .. })),
             "the inversion itself must be called as SvInv"
         );
         match &inside[0].var {
             Var::Snp { ref_base, alt_base } => {
-                assert_eq!(inside[0].pos, mirror as u64 + 1, "POS must be the mirrored ref pos");
+                assert_eq!(
+                    inside[0].pos,
+                    mirror as u64 + 1,
+                    "POS must be the mirrored ref pos"
+                );
                 assert_eq!(*ref_base, seq[mirror]);
                 // VCF alleles are on the reference's forward strand: the
                 // inverted query carries comp(flipped) at the mirrored pos
@@ -565,7 +696,10 @@ mod tests {
         for b in seq.iter_mut().take(5030).skip(5000) {
             *b = b'A';
         }
-        let refs = vec![FastaRecord { name: "c1".into(), seq: seq.clone() }];
+        let refs = vec![FastaRecord {
+            name: "c1".into(),
+            seq: seq.clone(),
+        }];
 
         // deletion of one A in the middle of the run -> POS must normalize
         // to 5000 (the anchor-base form of the leftmost representation)
@@ -573,7 +707,10 @@ mod tests {
         q1.remove(5015);
         let idx = build_idx(&refs);
         let (vars, _) = call_contig(&idx, &ref_seqs(&refs), &q1, &CallParams::default());
-        let dels: Vec<_> = vars.iter().filter(|v| matches!(v.var, Var::Del { .. })).collect();
+        let dels: Vec<_> = vars
+            .iter()
+            .filter(|v| matches!(v.var, Var::Del { .. }))
+            .collect();
         assert_eq!(dels.len(), 1, "dels: {dels:?}");
         assert_eq!(dels[0].pos, 5000);
         assert!(matches!(dels[0].var, Var::Del { len: 1 }));
@@ -582,7 +719,10 @@ mod tests {
         let mut q2 = seq.clone();
         q2.insert(5022, b'A');
         let (vars, _) = call_contig(&idx, &ref_seqs(&refs), &q2, &CallParams::default());
-        let inss: Vec<_> = vars.iter().filter(|v| matches!(v.var, Var::Ins { .. })).collect();
+        let inss: Vec<_> = vars
+            .iter()
+            .filter(|v| matches!(v.var, Var::Ins { .. }))
+            .collect();
         assert_eq!(inss.len(), 1, "inss: {inss:?}");
         assert_eq!(inss[0].pos, 5000);
     }
@@ -594,7 +734,10 @@ mod tests {
         // the complement of the base the revcomp query carries
         let mut rng = Rng::new(23);
         let seq = rand_seq(&mut rng, 100_000);
-        let refs = vec![FastaRecord { name: "c1".into(), seq: seq.clone() }];
+        let refs = vec![FastaRecord {
+            name: "c1".into(),
+            seq: seq.clone(),
+        }];
         let mut query = revcomp(&seq);
         let p = 50_000usize;
         let flipped = if query[p] == b'G' { b'T' } else { b'G' };
@@ -619,12 +762,26 @@ mod tests {
     fn sv_recall_on_simulated_genome() {
         let mut rng = Rng::new(24);
         let refs = vec![
-            FastaRecord { name: "c1".into(), seq: rand_seq(&mut rng, 1_200_000) },
-            FastaRecord { name: "c2".into(), seq: rand_seq(&mut rng, 800_000) },
+            FastaRecord {
+                name: "c1".into(),
+                seq: rand_seq(&mut rng, 1_200_000),
+            },
+            FastaRecord {
+                name: "c2".into(),
+                seq: rand_seq(&mut rng, 800_000),
+            },
         ];
         let sim = simulate(
             &refs,
-            &SimParams { snp: 300, indel: 30, del: 8, ins: 8, inv: 4, dup: 4, seed: 33 },
+            &SimParams {
+                snp: 300,
+                indel: 30,
+                del: 8,
+                ins: 8,
+                inv: 4,
+                dup: 4,
+                seed: 33,
+            },
         );
         let idx = build_idx(&refs);
         let mut vars = Vec::new();
@@ -699,9 +856,9 @@ mod tests {
         let fp = sv_calls
             .iter()
             .filter(|v| {
-                !truth
-                    .iter()
-                    .any(|(ci, t)| *ci as u32 == v.contig && (v.pos as i64 - t.pos() as i64).abs() <= 5_000)
+                !truth.iter().any(|(ci, t)| {
+                    *ci as u32 == v.contig && (v.pos as i64 - t.pos() as i64).abs() <= 5_000
+                })
             })
             .count();
         assert!(fp <= 4, "{fp} SV false positives");

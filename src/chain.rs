@@ -191,8 +191,7 @@ impl GreedyChainer {
                 self.flush();
                 // start the next chain from the first minimizer that failed
                 // against the previous one (tight junction), else this one
-                let (pq, ps, ph) =
-                    self.pending.take().unwrap_or((qpos, qstrand, hits[0]));
+                let (pq, ps, ph) = self.pending.take().unwrap_or((qpos, qstrand, hits[0]));
                 let mut anchors = Vec::new();
                 if self.retain_anchors {
                     anchors.push((pq as u32, ph.pos as u32));
@@ -232,7 +231,11 @@ impl GreedyChainer {
                     r_start: c.r_min,
                     r_end: c.r_max + self.k,
                     n_anchors: c.n,
-                    anchors: if self.retain_anchors { c.anchors } else { Vec::new() },
+                    anchors: if self.retain_anchors {
+                        c.anchors
+                    } else {
+                        Vec::new()
+                    },
                 });
             }
         }
@@ -268,7 +271,12 @@ pub fn suppress_secondary(chains: Vec<ChainRecord>) -> (Vec<ChainRecord>, u64) {
     }
     let n_dropped = drop.iter().filter(|&&d| d).count() as u64;
     (
-        chains.into_iter().zip(drop).filter(|(_, d)| !*d).map(|(c, _)| c).collect(),
+        chains
+            .into_iter()
+            .zip(drop)
+            .filter(|(_, d)| !*d)
+            .map(|(c, _)| c)
+            .collect(),
         n_dropped,
     )
 }
@@ -291,7 +299,11 @@ fn overlap_with(kept: &[(u64, u64)], s: u64, e: u64) -> u64 {
 /// Insert [s,e) into the sorted interval list, merging overlaps.
 fn insert_interval(kept: &mut Vec<(u64, u64)>, s: u64, e: u64) {
     let lo = kept.partition_point(|&(ks, _)| ks < s);
-    let start = if lo > 0 && kept[lo - 1].1 >= s { lo - 1 } else { lo };
+    let start = if lo > 0 && kept[lo - 1].1 >= s {
+        lo - 1
+    } else {
+        lo
+    };
     let mut end = start;
     while end < kept.len() && kept[end].0 < e {
         end += 1;
@@ -359,17 +371,37 @@ mod tests {
     #[test]
     fn snp_only_query_forms_one_long_chain() {
         let mut rng = Rng::new(1);
-        let refs = vec![FastaRecord { name: "c1".into(), seq: rand_seq(&mut rng, 200_000) }];
+        let refs = vec![FastaRecord {
+            name: "c1".into(),
+            seq: rand_seq(&mut rng, 200_000),
+        }];
         let sim = simulate(
             &refs,
-            &SimParams { snp: 200, indel: 0, del: 0, ins: 0, inv: 0, dup: 0, seed: 2 },
+            &SimParams {
+                snp: 200,
+                indel: 0,
+                del: 0,
+                ins: 0,
+                inv: 0,
+                dup: 0,
+                seed: 2,
+            },
         );
         let idx = build_idx(&refs);
-        let (chains, cstats, sstats) =
-            chain_contig(&idx, &sim.queries[0].seq, 100, ChainParams::default(), false);
+        let (chains, cstats, sstats) = chain_contig(
+            &idx,
+            &sim.queries[0].seq,
+            100,
+            ChainParams::default(),
+            false,
+        );
         assert!(sstats.matched_fraction() > 0.9);
         assert_eq!(cstats.chains, chains.len() as u64);
-        assert!(chains.len() <= 5, "unexpected chain fragmentation: {}", chains.len());
+        assert!(
+            chains.len() <= 5,
+            "unexpected chain fragmentation: {}",
+            chains.len()
+        );
         let cov = coverage(&chains);
         assert!(
             cov * 100 >= 90 * 200_000,
@@ -383,8 +415,17 @@ mod tests {
     fn large_deletion_breaks_the_chain() {
         let mut rng = Rng::new(4);
         let seq = rand_seq(&mut rng, 200_000);
-        let refs = vec![FastaRecord { name: "c1".into(), seq: seq.clone() }];
-        let query = apply_edits(&seq, &[VarKind::Del { pos: 100_000, len: 5_000 }]);
+        let refs = vec![FastaRecord {
+            name: "c1".into(),
+            seq: seq.clone(),
+        }];
+        let query = apply_edits(
+            &seq,
+            &[VarKind::Del {
+                pos: 100_000,
+                len: 5_000,
+            }],
+        );
         let idx = build_idx(&refs);
         let (chains, _, _) = chain_contig(&idx, &query, 100, ChainParams::default(), false);
         assert!(chains.len() >= 2, "a 5kb deletion must break the chain");
@@ -399,9 +440,18 @@ mod tests {
     fn inversion_forms_reverse_strand_chain() {
         let mut rng = Rng::new(6);
         let seq = rand_seq(&mut rng, 200_000);
-        let refs = vec![FastaRecord { name: "c1".into(), seq: seq.clone() }];
+        let refs = vec![FastaRecord {
+            name: "c1".into(),
+            seq: seq.clone(),
+        }];
         let (ipos, ilen) = (100_000u64, 3_000u64);
-        let query = apply_edits(&seq, &[VarKind::Inv { pos: ipos, len: ilen }]);
+        let query = apply_edits(
+            &seq,
+            &[VarKind::Inv {
+                pos: ipos,
+                len: ilen,
+            }],
+        );
         let idx = build_idx(&refs);
         let (chains, _, _) = chain_contig(&idx, &query, 100, ChainParams::default(), false);
 
@@ -409,12 +459,19 @@ mod tests {
             .iter()
             .filter(|c| c.strand == 1 && c.q_start < ipos + ilen - 100 && c.q_end > ipos + 100)
             .collect();
-        assert!(!inv.is_empty(), "no reverse-strand chain covering the inversion");
+        assert!(
+            !inv.is_empty(),
+            "no reverse-strand chain covering the inversion"
+        );
         // the inverted block itself chains on the minus strand
         assert!(inv[0].n_anchors > 100, "inversion chain too short");
         // flanking regions stay forward
-        assert!(chains.iter().any(|c| c.strand == 0 && c.q_end <= ipos + 100));
-        assert!(chains.iter().any(|c| c.strand == 0 && c.q_start >= ipos + ilen - 100));
+        assert!(chains
+            .iter()
+            .any(|c| c.strand == 0 && c.q_end <= ipos + 100));
+        assert!(chains
+            .iter()
+            .any(|c| c.strand == 0 && c.q_start >= ipos + ilen - 100));
     }
 
     #[test]
@@ -426,16 +483,29 @@ mod tests {
             ctg2.extend_from_slice(&te);
         }
         let refs = vec![
-            FastaRecord { name: "c1".into(), seq: rand_seq(&mut rng, 200_000) },
-            FastaRecord { name: "c2".into(), seq: ctg2 },
+            FastaRecord {
+                name: "c1".into(),
+                seq: rand_seq(&mut rng, 200_000),
+            },
+            FastaRecord {
+                name: "c2".into(),
+                seq: ctg2,
+            },
         ];
         let idx = build_idx(&refs);
         // self-mapping: every TE minimizer hits 50 reference copies, yet the
         // tandem array must collapse into a single (or few) chain blocks
         let (chains, cstats, sstats) =
             chain_contig(&idx, &refs[1].seq, 100, ChainParams::default(), false);
-        assert!(sstats.anchors > 1_000_000, "expected heavy repeat hit traffic");
-        assert!(chains.len() <= 3, "tandem array fragmented: {}", chains.len());
+        assert!(
+            sstats.anchors > 1_000_000,
+            "expected heavy repeat hit traffic"
+        );
+        assert!(
+            chains.len() <= 3,
+            "tandem array fragmented: {}",
+            chains.len()
+        );
         assert!(cstats.anchors_in_chains > 10_000);
         assert!(coverage(&chains) * 100 >= 99 * 250_000);
         assert!(chains.iter().all(|c| c.n_anchors >= 3));
@@ -444,7 +514,10 @@ mod tests {
     #[test]
     fn unrelated_sequence_yields_no_chains() {
         let mut rng = Rng::new(9);
-        let refs = vec![FastaRecord { name: "c1".into(), seq: rand_seq(&mut rng, 100_000) }];
+        let refs = vec![FastaRecord {
+            name: "c1".into(),
+            seq: rand_seq(&mut rng, 100_000),
+        }];
         let query = rand_seq(&mut rng, 100_000);
         let idx = build_idx(&refs);
         let (chains, _, _) = chain_contig(&idx, &query, 100, ChainParams::default(), false);
@@ -464,11 +537,11 @@ mod tests {
             anchors: Vec::new(),
         };
         let chains = vec![
-            mk(0, 1_000, 10),     // fully inside the primary -> dropped
-            mk(0, 10_000, 100),   // primary: highest anchor count
-            mk(5_000, 7_000, 20), // 100% inside the primary -> dropped
-            mk(9_500, 12_000, 30),// 500/2500 = 20% overlap -> kept
-            mk(20_000, 21_000, 5),// disjoint -> kept (suppression ignores size)
+            mk(0, 1_000, 10),      // fully inside the primary -> dropped
+            mk(0, 10_000, 100),    // primary: highest anchor count
+            mk(5_000, 7_000, 20),  // 100% inside the primary -> dropped
+            mk(9_500, 12_000, 30), // 500/2500 = 20% overlap -> kept
+            mk(20_000, 21_000, 5), // disjoint -> kept (suppression ignores size)
         ];
         let (kept, nd) = suppress_secondary(chains);
         assert_eq!(nd, 2);
@@ -486,11 +559,23 @@ mod tests {
         // chains only at its boundaries; suppression must keep all three
         let mut rng = Rng::new(6);
         let seq = rand_seq(&mut rng, 200_000);
-        let refs = vec![FastaRecord { name: "c1".into(), seq: seq.clone() }];
-        let query = apply_edits(&seq, &[VarKind::Inv { pos: 100_000, len: 3_000 }]);
+        let refs = vec![FastaRecord {
+            name: "c1".into(),
+            seq: seq.clone(),
+        }];
+        let query = apply_edits(
+            &seq,
+            &[VarKind::Inv {
+                pos: 100_000,
+                len: 3_000,
+            }],
+        );
         let idx = build_idx(&refs);
         let (chains, cstats, _) = chain_contig(&idx, &query, 100, ChainParams::default(), false);
-        assert_eq!(cstats.secondary_dropped, 0, "no chain should overlap another by >=50%");
+        assert_eq!(
+            cstats.secondary_dropped, 0,
+            "no chain should overlap another by >=50%"
+        );
         assert!(chains.iter().any(|c| c.strand == 1));
         assert!(chains.iter().any(|c| c.strand == 0));
     }
@@ -502,14 +587,36 @@ mod tests {
         let feed_stream = |ch: &mut GreedyChainer| {
             for q in (0..=2000u64).step_by(20) {
                 if q % 400 == 200 {
-                    ch.feed(q, 0, &[Hit { hash: 999, contig: 0, pos: 150_000, strand: 0 }]);
+                    ch.feed(
+                        q,
+                        0,
+                        &[Hit {
+                            hash: 999,
+                            contig: 0,
+                            pos: 150_000,
+                            strand: 0,
+                        }],
+                    );
                 } else {
-                    ch.feed(q, 0, &[Hit { hash: q, contig: 0, pos: q, strand: 0 }]);
+                    ch.feed(
+                        q,
+                        0,
+                        &[Hit {
+                            hash: q,
+                            contig: 0,
+                            pos: q,
+                            strand: 0,
+                        }],
+                    );
                 }
             }
         };
-        let params =
-            ChainParams { patience: 1_000, min_anchors: 5, min_span: 1, ..Default::default() };
+        let params = ChainParams {
+            patience: 1_000,
+            min_anchors: 5,
+            min_span: 1,
+            ..Default::default()
+        };
         let mut ch = GreedyChainer::new(19, params, false);
         feed_stream(&mut ch);
         let (chains, _) = ch.finish();
@@ -518,12 +625,19 @@ mod tests {
         assert_eq!(chains[0].n_anchors, 96);
 
         // patience=0: the old kill-on-first-failure behavior, must fragment
-        let strict =
-            ChainParams { patience: 0, min_anchors: 5, min_span: 1, ..Default::default() };
+        let strict = ChainParams {
+            patience: 0,
+            min_anchors: 5,
+            min_span: 1,
+            ..Default::default()
+        };
         let mut ch2 = GreedyChainer::new(19, strict, false);
         feed_stream(&mut ch2);
         let (chains2, _) = ch2.finish();
-        assert!(chains2.len() >= 5, "without patience every decoy breaks the chain");
+        assert!(
+            chains2.len() >= 5,
+            "without patience every decoy breaks the chain"
+        );
     }
 
     #[test]
@@ -533,7 +647,10 @@ mod tests {
         let mut rng = Rng::new(13);
         let base = rand_seq(&mut rng, 200_000);
         let elem = rand_seq(&mut rng, 300);
-        let refs = vec![FastaRecord { name: "c1".into(), seq: base.clone() }];
+        let refs = vec![FastaRecord {
+            name: "c1".into(),
+            seq: base.clone(),
+        }];
         // insert a copy every 8 kb across [10k, 170k): 20 insertions
         let mut query: Vec<u8> = Vec::with_capacity(206_000);
         let mut next_ins = 10_000usize;
@@ -550,7 +667,11 @@ mod tests {
         assert!(chains.len() <= 22, "over-fragmented: {}", chains.len());
         let cov = coverage(&chains);
         // the chain blocks tile everything except the inserted copies
-        assert!(cov * 100 >= 95 * query.len() as u64, "coverage {cov}/{}", query.len());
+        assert!(
+            cov * 100 >= 95 * query.len() as u64,
+            "coverage {cov}/{}",
+            query.len()
+        );
         assert!(chains.iter().all(|c| c.strand == 0));
     }
 }

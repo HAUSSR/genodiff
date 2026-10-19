@@ -29,7 +29,12 @@ impl Default for AlignScores {
     fn default() -> Self {
         // 2 mismatches (-12) beat a spurious ins+del pair (-16); a real 1bp
         // indel (-8) beats miscalling it as flanking mismatches (-12)
-        AlignScores { match_: 2, mismatch: -6, gap_open: -8, gap_extend: -2 }
+        AlignScores {
+            match_: 2,
+            mismatch: -6,
+            gap_open: -8,
+            gap_extend: -2,
+        }
     }
 }
 
@@ -97,7 +102,11 @@ pub fn align(a: &[u8], b: &[u8], band: usize, sc: &AlignScores) -> Option<Vec<Op
                     }
                 }
                 if best > UNREACHABLE {
-                    let sub = if a[i - 1] == b[j - 1] { sc.match_ } else { sc.mismatch };
+                    let sub = if a[i - 1] == b[j - 1] {
+                        sc.match_
+                    } else {
+                        sc.mismatch
+                    };
                     s[c][0] = best + sub;
                     d[c][0] = dm;
                 }
@@ -163,7 +172,11 @@ pub fn align(a: &[u8], b: &[u8], band: usize, sc: &AlignScores) -> Option<Vec<Op
         let cc = j * w + (i - los[j]);
         match state {
             0 => {
-                ops.push(if a[i - 1] == b[j - 1] { Op::Match } else { Op::Mismatch });
+                ops.push(if a[i - 1] == b[j - 1] {
+                    Op::Match
+                } else {
+                    Op::Mismatch
+                });
                 state = d[cc][0];
                 i -= 1;
                 j -= 1;
@@ -203,7 +216,13 @@ mod tests {
     #[test]
     fn identical_sequences_all_match() {
         let a = b"ACGTACGTACGTAAAACCCCGGGGTTTT";
-        let ops = align(a, a, suggest_band(a.len(), a.len()), &AlignScores::default()).unwrap();
+        let ops = align(
+            a,
+            a,
+            suggest_band(a.len(), a.len()),
+            &AlignScores::default(),
+        )
+        .unwrap();
         assert!(ops.iter().all(|o| *o == Op::Match));
     }
 
@@ -212,7 +231,13 @@ mod tests {
         let a = b"ACGTACGTACGTACGTACGT";
         let mut b = a.to_vec();
         b[10] = b'T';
-        let ops = align(a, &b, suggest_band(a.len(), b.len()), &AlignScores::default()).unwrap();
+        let ops = align(
+            a,
+            &b,
+            suggest_band(a.len(), b.len()),
+            &AlignScores::default(),
+        )
+        .unwrap();
         assert_eq!(ops_string(&ops), "==========*=========");
     }
 
@@ -221,11 +246,23 @@ mod tests {
         let a = b"ACGTACGTACGTAAAACGTACGT";
         let mut b = a.to_vec();
         b.remove(12); // 1bp deletion
-        let ops = align(a, &b, suggest_band(a.len(), b.len()), &AlignScores::default()).unwrap();
+        let ops = align(
+            a,
+            &b,
+            suggest_band(a.len(), b.len()),
+            &AlignScores::default(),
+        )
+        .unwrap();
         assert_eq!(ops_string(&ops), "============D==========");
         let mut c = a.to_vec();
         c.insert(8, b'G'); // 1bp insertion
-        let ops = align(a, &c, suggest_band(a.len(), c.len()), &AlignScores::default()).unwrap();
+        let ops = align(
+            a,
+            &c,
+            suggest_band(a.len(), c.len()),
+            &AlignScores::default(),
+        )
+        .unwrap();
         assert_eq!(ops_string(&ops), "========I===============");
     }
 
@@ -262,7 +299,11 @@ mod tests {
                 let best_prev = mm[i - 1][j - 1].max(xx[i - 1][j - 1]).max(yy[i - 1][j - 1]);
                 if best_prev > neg / 2 {
                     mm[i][j] = best_prev
-                        + if a[i - 1] == b[j - 1] { sc.match_ } else { sc.mismatch };
+                        + if a[i - 1] == b[j - 1] {
+                            sc.match_
+                        } else {
+                            sc.mismatch
+                        };
                 }
                 xx[i][j] = (mm[i - 1][j] + sc.gap_open)
                     .max(xx[i - 1][j] + sc.gap_extend)

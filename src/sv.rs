@@ -79,9 +79,7 @@ pub fn flag_repeat_loci(
 /// tight junction). Real inversions flanked by long repeats have symmetric
 /// gaps; paralogs do not.
 fn gaps_match(qgap: u64, rgap: u64, max_near: u64) -> bool {
-    qgap <= max_near
-        && rgap <= max_near
-        && qgap.abs_diff(rgap) <= qgap.max(rgap) / 4 + 500
+    qgap <= max_near && rgap <= max_near && qgap.abs_diff(rgap) <= qgap.max(rgap) / 4 + 500
 }
 
 /// Call SVs from the chain layout of one query contig. `chains` must be in
@@ -108,7 +106,10 @@ pub fn call_svs(
             continue;
         }
         by_end.entry(c.ref_contig).or_default().push((c.r_end, i));
-        by_start.entry(c.ref_contig).or_default().push((c.r_start, i));
+        by_start
+            .entry(c.ref_contig)
+            .or_default()
+            .push((c.r_start, i));
     }
     for v in by_end.values_mut() {
         v.sort_unstable();
@@ -181,7 +182,10 @@ pub fn call_svs(
                 out.push(VarRec {
                     contig: a.ref_contig,
                     pos: a.r_end.max(1),
-                    var: Var::SvTra { chr2: b.ref_contig, pos2: b.r_start.max(1) },
+                    var: Var::SvTra {
+                        chr2: b.ref_contig,
+                        pos2: b.r_start.max(1),
+                    },
                     qspan: None, // the far side is described by CHR2/POS2
                 });
             }
@@ -191,7 +195,10 @@ pub fn call_svs(
             continue; // orientation mix at a junction: leave to INV pattern
         }
         // duplication: same-strand chains on overlapping ref spans
-        let ov = a.r_end.min(b.r_end).saturating_sub(a.r_start.max(b.r_start));
+        let ov = a
+            .r_end
+            .min(b.r_end)
+            .saturating_sub(a.r_start.max(b.r_start));
         if ov >= p.min_sv_len {
             let dup_start = a.r_start.max(b.r_start).max(1) as usize;
             let dup_end = a.r_end.min(b.r_end) as usize;
@@ -218,10 +225,7 @@ pub fn call_svs(
         // paired with a megabase-scale ref gap (or the mirror image) is the
         // signature of a mis-mapped chain pair / large-scale rearrangement,
         // not a locus-level SV
-        if diff >= p.min_sv_len as i64
-            && qgap <= p.max_near
-            && rgap <= p.max_near as i64
-        {
+        if diff >= p.min_sv_len as i64 && qgap <= p.max_near && rgap <= p.max_near as i64 {
             let start = if a.strand == 0 { a.r_end } else { b.r_end };
             let s = start.max(1) as usize;
             let del_seq = ref_seqs[a.ref_contig as usize][s..(s + diff as usize)].to_vec();
@@ -231,16 +235,17 @@ pub fn call_svs(
                 var: Var::SvDel { seq: del_seq },
                 qspan: None, // deleted bases exist only in the reference
             });
-        } else if -diff >= p.min_sv_len as i64
-            && qgap <= p.max_near
-            && rgap <= p.max_near as i64
-        {
+        } else if -diff >= p.min_sv_len as i64 && qgap <= p.max_near && rgap <= p.max_near as i64 {
             let x = if a.strand == 0 { b.r_start } else { a.r_start };
             let x_idx = x.max(1) as usize;
             // inserted query bases are the gap between the chains, whatever
             // their strand
             let (qa, qb) = (a.q_end as usize, b.q_start as usize);
-            let ins_seq = if qb > qa { qseq[qa..qb].to_vec() } else { Vec::new() };
+            let ins_seq = if qb > qa {
+                qseq[qa..qb].to_vec()
+            } else {
+                Vec::new()
+            };
             if !ins_seq.is_empty() {
                 out.push(VarRec {
                     contig: a.ref_contig,
@@ -274,10 +279,22 @@ mod tests {
 
     fn svs(chains: &[ChainRecord]) -> Vec<VarRec> {
         // dummy sequences long enough for all test coordinates
-        let ref_seqs = vec![vec![b'A'; 600_000], vec![b'A'; 600_000], vec![b'A'; 600_000],
-                            vec![b'A'; 600_000], vec![b'A'; 600_000], vec![b'A'; 600_000]];
+        let ref_seqs = vec![
+            vec![b'A'; 600_000],
+            vec![b'A'; 600_000],
+            vec![b'A'; 600_000],
+            vec![b'A'; 600_000],
+            vec![b'A'; 600_000],
+            vec![b'A'; 600_000],
+        ];
         let qseq = vec![b'A'; 600_000];
-        call_svs(chains, &vec![false; chains.len()], &SvParams::default(), &ref_seqs, &qseq)
+        call_svs(
+            chains,
+            &vec![false; chains.len()],
+            &SvParams::default(),
+            &ref_seqs,
+            &qseq,
+        )
     }
 
     #[test]
@@ -306,7 +323,13 @@ mod tests {
         ]);
         assert_eq!(s.len(), 1);
         assert_eq!((s[0].contig, s[0].pos), (0, 10_000));
-        assert!(matches!(s[0].var, Var::SvTra { chr2: 1, pos2: 100_000 }));
+        assert!(matches!(
+            s[0].var,
+            Var::SvTra {
+                chr2: 1,
+                pos2: 100_000
+            }
+        ));
     }
 
     #[test]
@@ -358,7 +381,10 @@ mod tests {
             chain(0, 1, 10_100, 13_000, 10_100, 13_000),
             chain(0, 0, 13_100, 23_000, 13_100, 23_000),
         ]);
-        let invs: Vec<_> = s.iter().filter(|v| matches!(v.var, Var::SvInv { .. })).collect();
+        let invs: Vec<_> = s
+            .iter()
+            .filter(|v| matches!(v.var, Var::SvInv { .. }))
+            .collect();
         assert_eq!(invs.len(), 1);
         assert_eq!(invs[0].pos, 10_100);
         assert!(matches!(invs[0].var, Var::SvInv { ref seq } if seq.len() == 2_900));
@@ -377,8 +403,15 @@ mod tests {
             chain(0, 1, 10_600, 13_500, 10_100, 13_000),   // inversion
             chain(0, 0, 13_600, 23_000, 13_100, 22_500),   // right flank
         ]);
-        let invs: Vec<_> = s.iter().filter(|v| matches!(v.var, Var::SvInv { .. })).collect();
-        assert_eq!(invs.len(), 1, "inversion must be found despite the noise chain");
+        let invs: Vec<_> = s
+            .iter()
+            .filter(|v| matches!(v.var, Var::SvInv { .. }))
+            .collect();
+        assert_eq!(
+            invs.len(),
+            1,
+            "inversion must be found despite the noise chain"
+        );
         assert_eq!(invs[0].pos, 10_100);
         assert!(matches!(invs[0].var, Var::SvInv { ref seq } if seq.len() == 2_900));
     }
@@ -469,7 +502,14 @@ mod tests {
         // one ref bin hit by 5 chains from query positions 1Mb apart
         let mut chains = Vec::new();
         for i in 0..5u64 {
-            chains.push(chain(0, 1, i * 1_000_000, i * 1_000_000 + 3_000, 114_300_000, 114_303_000));
+            chains.push(chain(
+                0,
+                1,
+                i * 1_000_000,
+                i * 1_000_000 + 3_000,
+                114_300_000,
+                114_303_000,
+            ));
         }
         let flagged = flag_repeat_loci(&chains, 16_384, 5, 50_000);
         assert!(flagged.iter().all(|f| *f));

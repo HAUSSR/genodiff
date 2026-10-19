@@ -54,15 +54,22 @@ impl RefIndex {
                 name,
                 length: rec.seq.len() as u64,
             });
-            stream_minimizers(&rec.seq, k, w, |h, p, s| hits.push(Hit {
-                hash: h,
-                contig: ci as u32,
-                pos: p,
-                strand: s,
-            }));
+            stream_minimizers(&rec.seq, k, w, |h, p, s| {
+                hits.push(Hit {
+                    hash: h,
+                    contig: ci as u32,
+                    pos: p,
+                    strand: s,
+                })
+            });
         }
         hits.sort_unstable();
-        Ok(RefIndex { k, w, contigs, hits })
+        Ok(RefIndex {
+            k,
+            w,
+            contigs,
+            hits,
+        })
     }
 
     pub fn lookup(&self, h: u64) -> &[Hit] {
@@ -103,7 +110,10 @@ impl RefIndex {
         let mut magic = [0u8; 4];
         f.read_exact(&mut magic)?;
         if &magic != MAGIC {
-            return Err(io::Error::new(io::ErrorKind::InvalidData, "not a genodiff index"));
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "not a genodiff index",
+            ));
         }
         let version = read_u32(&mut f)?;
         if version != VERSION {
@@ -139,7 +149,12 @@ impl RefIndex {
                 strand: buf[20],
             });
         }
-        Ok(RefIndex { k, w, contigs, hits })
+        Ok(RefIndex {
+            k,
+            w,
+            contigs,
+            hits,
+        })
     }
 }
 
@@ -168,8 +183,14 @@ mod tests {
     fn build_save_load_roundtrip() {
         let mut rng = Rng::new(17);
         let recs = vec![
-            FastaRecord { name: "ctg1 extra-description".into(), seq: rand_seq(&mut rng, 20_000) },
-            FastaRecord { name: "ctg2".into(), seq: rand_seq(&mut rng, 8_000) },
+            FastaRecord {
+                name: "ctg1 extra-description".into(),
+                seq: rand_seq(&mut rng, 20_000),
+            },
+            FastaRecord {
+                name: "ctg2".into(),
+                seq: rand_seq(&mut rng, 8_000),
+            },
         ];
         let idx = RefIndex::build(recs.iter().map(|r| Ok(r.clone())), 15, 10).unwrap();
 

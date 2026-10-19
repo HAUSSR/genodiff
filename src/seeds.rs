@@ -105,8 +105,19 @@ mod tests {
     #[test]
     fn snp_only_query_keeps_most_minimizers_matched() {
         let mut rng = Rng::new(2);
-        let refs = vec![FastaRecord { name: "chr1".into(), seq: rand_seq(&mut rng, 100_000) }];
-        let p = SimParams { snp: 100, indel: 0, del: 0, ins: 0, inv: 0, dup: 0, seed: 5 };
+        let refs = vec![FastaRecord {
+            name: "chr1".into(),
+            seq: rand_seq(&mut rng, 100_000),
+        }];
+        let p = SimParams {
+            snp: 100,
+            indel: 0,
+            del: 0,
+            ins: 0,
+            inv: 0,
+            dup: 0,
+            seed: 5,
+        };
         let sim = simulate(&refs, &p);
         let idx = build_test_index(&refs);
         let mut stats = SeedStats::default();
@@ -122,15 +133,29 @@ mod tests {
     #[test]
     fn reverse_complemented_query_hits_opposite_strand() {
         let mut rng = Rng::new(6);
-        let refs = vec![FastaRecord { name: "chr1".into(), seq: rand_seq(&mut rng, 100_000) }];
-        let p = SimParams { snp: 50, indel: 0, del: 0, ins: 0, inv: 0, dup: 0, seed: 5 };
+        let refs = vec![FastaRecord {
+            name: "chr1".into(),
+            seq: rand_seq(&mut rng, 100_000),
+        }];
+        let p = SimParams {
+            snp: 50,
+            indel: 0,
+            del: 0,
+            ins: 0,
+            inv: 0,
+            dup: 0,
+            seed: 5,
+        };
         let sim = simulate(&refs, &p);
         let rcq = revcomp(&sim.queries[0].seq);
         let idx = build_test_index(&refs);
         let mut stats = SeedStats::default();
         let anchors = collect_anchors(&idx, &rcq, 0, 1000, &mut stats);
         assert!(stats.matched_fraction() >= 0.95);
-        assert!(!anchors.is_empty(), "revcomp query must still hit the index");
+        assert!(
+            !anchors.is_empty(),
+            "revcomp query must still hit the index"
+        );
         // Nearly all anchors are reverse-strand. A handful of forward seeds are
         // expected: a random sequence contains some k-mer pairs that are each
         // other's reverse complement, which legitimately match forward.
@@ -146,8 +171,19 @@ mod tests {
     #[test]
     fn inverted_region_flips_strand_of_local_anchors() {
         let mut rng = Rng::new(8);
-        let refs = vec![FastaRecord { name: "chr1".into(), seq: rand_seq(&mut rng, 200_000) }];
-        let p = SimParams { snp: 0, indel: 0, del: 0, ins: 0, inv: 1, dup: 0, seed: 12 };
+        let refs = vec![FastaRecord {
+            name: "chr1".into(),
+            seq: rand_seq(&mut rng, 200_000),
+        }];
+        let p = SimParams {
+            snp: 0,
+            indel: 0,
+            del: 0,
+            ins: 0,
+            inv: 1,
+            dup: 0,
+            seed: 12,
+        };
         let sim = simulate(&refs, &p);
         let (_, inv) = sim
             .variants

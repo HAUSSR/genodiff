@@ -24,7 +24,14 @@ impl<W: Write> VcfWriter<W> {
     }
 
     /// `pos` is 1-based, as written into the file.
-    pub fn record(&mut self, chrom: &str, pos: u64, ref_al: &[u8], alt_al: &[u8], info: &str) -> io::Result<()> {
+    pub fn record(
+        &mut self,
+        chrom: &str,
+        pos: u64,
+        ref_al: &[u8],
+        alt_al: &[u8],
+        info: &str,
+    ) -> io::Result<()> {
         write!(self.out, "{chrom}\t{pos}\t.\t")?;
         self.out.write_all(ref_al)?;
         self.out.write_all(b"\t")?;

@@ -17,14 +17,29 @@ pub const MARGIN: u64 = 200;
 
 #[derive(Clone)]
 pub enum VarKind {
-    Snp { pos: u64, alt: u8 },
+    Snp {
+        pos: u64,
+        alt: u8,
+    },
     /// delete [pos, pos+len)
-    Del { pos: u64, len: u64 },
+    Del {
+        pos: u64,
+        len: u64,
+    },
     /// insert `seq` between positions pos-1 and pos
-    Ins { pos: u64, seq: Vec<u8> },
-    Inv { pos: u64, len: u64 },
+    Ins {
+        pos: u64,
+        seq: Vec<u8>,
+    },
+    Inv {
+        pos: u64,
+        len: u64,
+    },
     /// tandem duplication of [pos, pos+len)
-    Dup { pos: u64, len: u64 },
+    Dup {
+        pos: u64,
+        len: u64,
+    },
 }
 
 impl VarKind {
@@ -181,7 +196,10 @@ pub fn simulate(refs: &[FastaRecord], p: &SimParams) -> SimResults {
         let mut edits = std::mem::take(&mut by_contig[ci]);
         edits.sort_by_key(|e| e.pos());
         let seq = apply_edits(&rec.seq, &edits);
-        queries.push(FastaRecord { name: rec.name.clone(), seq });
+        queries.push(FastaRecord {
+            name: rec.name.clone(),
+            seq,
+        });
     }
     variants.sort_by_key(|(ci, v)| (*ci, v.pos()));
 
@@ -351,13 +369,25 @@ mod tests {
         assert_eq!(&q[1000..], &seq[1037..]);
 
         let ins = b"GGCCGGCC".to_vec();
-        let q = apply_edits(&seq, &[VarKind::Ins { pos: 2000, seq: ins.clone() }]);
+        let q = apply_edits(
+            &seq,
+            &[VarKind::Ins {
+                pos: 2000,
+                seq: ins.clone(),
+            }],
+        );
         assert_eq!(q.len(), seq.len() + 8);
         assert_eq!(&q[1993..2000], &seq[1993..2000]);
         assert_eq!(&q[2000..2008], &ins[..]);
         assert_eq!(&q[2008..], &seq[2000..]);
 
-        let q = apply_edits(&seq, &[VarKind::Inv { pos: 3000, len: 100 }]);
+        let q = apply_edits(
+            &seq,
+            &[VarKind::Inv {
+                pos: 3000,
+                len: 100,
+            }],
+        );
         assert_eq!(q.len(), seq.len());
         assert_eq!(&q[3000..3100], &revcomp(&seq[3000..3100])[..]);
         assert_eq!(&q[2900..3000], &seq[2900..3000]);
@@ -372,8 +402,14 @@ mod tests {
     fn simulate_places_exact_counts_without_overlap() {
         let mut rng = Rng::new(21);
         let refs = vec![
-            FastaRecord { name: "c1".into(), seq: rand_seq(&mut rng, 200_000) },
-            FastaRecord { name: "c2".into(), seq: rand_seq(&mut rng, 100_000) },
+            FastaRecord {
+                name: "c1".into(),
+                seq: rand_seq(&mut rng, 200_000),
+            },
+            FastaRecord {
+                name: "c2".into(),
+                seq: rand_seq(&mut rng, 100_000),
+            },
         ];
         let p = SimParams {
             snp: 300,
@@ -392,8 +428,14 @@ mod tests {
                 + n_of(|v| matches!(v, VarKind::Ins { seq, .. } if seq.len() < 50)),
             30
         );
-        assert_eq!(n_of(|v| matches!(v, VarKind::Del { len, .. } if *len >= 50)), p.del as usize);
-        assert_eq!(n_of(|v| matches!(v, VarKind::Ins { seq, .. } if seq.len() >= 50)), 3);
+        assert_eq!(
+            n_of(|v| matches!(v, VarKind::Del { len, .. } if *len >= 50)),
+            p.del as usize
+        );
+        assert_eq!(
+            n_of(|v| matches!(v, VarKind::Ins { seq, .. } if seq.len() >= 50)),
+            3
+        );
         assert_eq!(n_of(|v| matches!(v, VarKind::Inv { .. })), 2);
         assert_eq!(n_of(|v| matches!(v, VarKind::Dup { .. })), 2);
 
@@ -423,8 +465,19 @@ mod tests {
     #[test]
     fn truth_vcf_has_one_record_per_variant() {
         let mut rng = Rng::new(31);
-        let refs = vec![FastaRecord { name: "c1".into(), seq: rand_seq(&mut rng, 50_000) }];
-        let p = SimParams { snp: 40, indel: 10, del: 1, ins: 1, inv: 1, dup: 1, seed: 4 };
+        let refs = vec![FastaRecord {
+            name: "c1".into(),
+            seq: rand_seq(&mut rng, 50_000),
+        }];
+        let p = SimParams {
+            snp: 40,
+            indel: 10,
+            del: 1,
+            ins: 1,
+            inv: 1,
+            dup: 1,
+            seed: 4,
+        };
         let res = simulate(&refs, &p);
         let mut buf: Vec<u8> = Vec::new();
         {

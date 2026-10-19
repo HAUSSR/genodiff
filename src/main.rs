@@ -155,8 +155,8 @@ fn cmd_index(args: &[String]) -> Result<ExitCode, String> {
     }
     let t0 = Instant::now();
     let file = File::open(Path::new(pos[0])).map_err(|e| format!("open {}: {e}", pos[0]))?;
-    let idx = RefIndex::build(FastaReader::new(file), k, w)
-        .map_err(|e| format!("build index: {e}"))?;
+    let idx =
+        RefIndex::build(FastaReader::new(file), k, w).map_err(|e| format!("build index: {e}"))?;
     let total_bp: u64 = idx.contigs.iter().map(|c| c.length).sum();
     idx.save(Path::new(pos[1]))
         .map_err(|e| format!("save {}: {e}", pos[1]))?;
@@ -248,7 +248,9 @@ fn cmd_map(args: &[String]) -> Result<ExitCode, String> {
     let threads: usize = flag_num::<usize>(
         args,
         "--threads",
-        thread::available_parallelism().map(|n| n.get()).unwrap_or(1),
+        thread::available_parallelism()
+            .map(|n| n.get())
+            .unwrap_or(1),
     )?
     .max(1);
     // cap how many contigs are held in flight (each fully in memory while it
@@ -409,16 +411,31 @@ fn write_vcf_header<W: Write>(
     writeln!(out, "##ALT=<ID=INV,Description=\"Inversion\">")?;
     writeln!(out, "##ALT=<ID=DUP,Description=\"Duplication\">")?;
     writeln!(out, "##ALT=<ID=BND,Description=\"Breakend\">")?;
-    writeln!(out, "##INFO=<ID=SVTYPE,Number=1,Type=String,Description=\"Type of structural variant\">")?;
+    writeln!(
+        out,
+        "##INFO=<ID=SVTYPE,Number=1,Type=String,Description=\"Type of structural variant\">"
+    )?;
     writeln!(out, "##INFO=<ID=END,Number=1,Type=Integer,Description=\"End position of the structural variant on the reference\">")?;
-    writeln!(out, "##INFO=<ID=SVLEN,Number=1,Type=Integer,Description=\"Length of the structural variant\">")?;
+    writeln!(
+        out,
+        "##INFO=<ID=SVLEN,Number=1,Type=Integer,Description=\"Length of the structural variant\">"
+    )?;
     writeln!(out, "##INFO=<ID=CHR2,Number=1,Type=String,Description=\"Chromosome of second breakend (reference)\">")?;
     writeln!(out, "##INFO=<ID=POS2,Number=1,Type=Integer,Description=\"Position of second breakend (reference)\">")?;
     writeln!(out, "##INFO=<ID=QSEQ,Number=1,Type=String,Description=\"Query contig of this variant's query-side span (see ##genodiff_query)\">")?;
     writeln!(out, "##INFO=<ID=QSTART,Number=1,Type=Integer,Description=\"1-based start of the query-side span; extract the sequence with e.g. samtools faidx query.fa QSEQ:QSTART-QEND\">")?;
-    writeln!(out, "##INFO=<ID=QEND,Number=1,Type=Integer,Description=\"1-based end of the query-side span\">")?;
-    writeln!(out, "##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">")?;
-    writeln!(out, "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t{sample}")
+    writeln!(
+        out,
+        "##INFO=<ID=QEND,Number=1,Type=Integer,Description=\"1-based end of the query-side span\">"
+    )?;
+    writeln!(
+        out,
+        "##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">"
+    )?;
+    writeln!(
+        out,
+        "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t{sample}"
+    )
 }
 
 /// append QSEQ/QSTART/QEND to the INFO column when the variant carries a
@@ -557,7 +574,9 @@ fn cmd_call(args: &[String]) -> Result<ExitCode, String> {
     let threads: usize = flag_num::<usize>(
         args,
         "--threads",
-        thread::available_parallelism().map(|n| n.get()).unwrap_or(1),
+        thread::available_parallelism()
+            .map(|n| n.get())
+            .unwrap_or(1),
     )?
     .max(1);
     let params = CallParams {
@@ -785,8 +804,8 @@ fn cmd_sim(args: &[String]) -> Result<ExitCode, String> {
         fw.flush().map_err(|e| format!("write query.fa: {e}"))?;
     }
     {
-        let vf = File::create(outdir.join("truth.vcf"))
-            .map_err(|e| format!("write truth.vcf: {e}"))?;
+        let vf =
+            File::create(outdir.join("truth.vcf")).map_err(|e| format!("write truth.vcf: {e}"))?;
         let mut vw = VcfWriter::create(vf).map_err(|e| format!("write truth.vcf: {e}"))?;
         sim::write_truth_vcf(&mut vw, &refs, &res.variants)
             .map_err(|e| format!("write truth.vcf: {e}"))?;
@@ -845,9 +864,7 @@ fn cmd_randref(args: &[String]) -> Result<ExitCode, String> {
     fw.flush().map_err(|e| format!("write: {e}"))?;
     eprintln!(
         "[genodiff] random reference: {} bp in {} contig(s) -> {}",
-        written,
-        ncontigs,
-        pos[0]
+        written, ncontigs, pos[0]
     );
     Ok(ExitCode::SUCCESS)
 }
