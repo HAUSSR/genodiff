@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: "If you use genodiff in your research, please cite it."
+title: "genodiff: a self-contained, zero-dependency tool for whole-genome alignment and variant calling between haploid genome assemblies"
+authors:
+  - family-names: "Zhao"
+    given-names: "Haijun"
+    orcid: "https://orcid.org/0000-0000-0000-0000"
+version: "1.2.0"
+date-released: "2026-10-19"
+license: MIT
+repository-code: "https://github.com/<your-username>/genodiff"
+abstract: >-
+  genodiff is a self-contained whole-genome comparison tool written from
+  scratch in Rust. It aligns haploid genome assemblies against a reference
+  using a canonical minimizer index and greedy collinear chaining with
+  patience-based break tolerance, calls SNPs and small InDels via banded
+  affine gap alignment, infers structural variants (DEL, INS, INV, DUP, BND)
+  from chain topology, and outputs standard VCF 4.2. The tool has zero
+  external dependencies and processes 800 Mb genomes in under 2 minutes.
+keywords:
+  - bioinformatics
+  - genome assembly comparison
+  - structural variant calling
+  - minimizer
+  - synteny
+  - Rust
